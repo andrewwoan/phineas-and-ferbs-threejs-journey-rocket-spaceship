@@ -82,6 +82,8 @@ gltfLoader.load("real_trolls.glb", (gltf) => {
   scene.add(gltf.scene);
 });
 
+scene.background = new THREE.Color(0xabcdef);
+
 /**
  * Sizes
  */
