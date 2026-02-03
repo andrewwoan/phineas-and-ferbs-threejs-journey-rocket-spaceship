@@ -16,7 +16,7 @@ const scene = new THREE.Scene();
  */
 const sound = new Howl({
   src: ["troll_music.mp3"],
-  volume: 0.5,
+  volume: 0.3,
   autoplay: true,
   loop: true,
   onloaderror: function (id, error) {
@@ -47,7 +47,7 @@ gltfLoader.setDRACOLoader(dracoLoader);
 let whiteFish = null;
 let purpleFish = null;
 
-gltfLoader.load("ForTheTrolls.glb", (gltf) => {
+gltfLoader.load("real_trolls.glb", (gltf) => {
   // Find the fish meshes in the loaded model
   gltf.scene.traverse((child) => {
     if (child.name === "White_Fish") {
@@ -109,24 +109,22 @@ window.addEventListener("resize", () => {
  */
 // Base camera
 const camera = new THREE.PerspectiveCamera(
-  45,
+  50,
   sizes.width / sizes.height,
   0.1,
   1000,
 );
-camera.position.set(40.453145030319895, 11.041503878457771, 12.321517479276249);
+camera.position.set(
+  -10.531037848972133,
+  2.8900567700050646,
+  0.020307391191941804,
+);
 scene.add(camera);
 
 // Controls
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.target.set(
-  -22.063965666916737,
-
-  6.885406148470799,
-
-  -3.9741442649659633,
-);
+controls.target.set(2.3683907718243873, 1.0882903359783558, 2.15332652306971);
 
 /**
  * Renderer
@@ -145,8 +143,8 @@ const clock = new THREE.Clock();
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime();
-  // console.log(camera.position);
-  // console.log(controls.target);
+  console.log(camera.position);
+  console.log(controls.target);
   // Animate fish floating up and down
   if (whiteFish) {
     // White fish floats with a slower, gentle motion
