@@ -17,7 +17,7 @@ const scene = new THREE.Scene();
 const sound = new Howl({
   src: ["troll_music.mp3"],
   volume: 0.3,
-  // autoplay: true,
+  autoplay: true,
   loop: true,
   onloaderror: function (id, error) {
     console.error("Error loading audio:", error);
