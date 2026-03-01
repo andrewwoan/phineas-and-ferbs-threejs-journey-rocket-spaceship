@@ -17,7 +17,7 @@ const scene = new THREE.Scene();
 const sound = new Howl({
   src: ["troll_music.mp3"],
   volume: 0.3,
-  autoplay: true,
+  // autoplay: true,
   loop: true,
   onloaderror: function (id, error) {
     console.error("Error loading audio:", error);
@@ -27,62 +27,97 @@ const sound = new Howl({
 /**
  * Loaders
  */
-// Texture loader
-
-// Draco loader
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath("draco/");
 
-// GLTF loader
 const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
-
-/**
- * Textures
- */
 
 /**
  * Model
  */
 let whiteFish = null;
 let purpleFish = null;
+let rocket = null;
+let fire = null;
+let rocketBaseY = null;
+let fermArm = null;
+let arm = null;
+let head = null;
 
-gltfLoader.load("real_trolls.glb", (gltf) => {
-  // Find the fish meshes in the loaded model
+gltfLoader.load("phineas_compressed.glb", (gltf) => {
   gltf.scene.traverse((child) => {
     if (child.name === "White_Fish") {
       whiteFish = child;
     } else if (child.name === "Purple_Fish") {
       purpleFish = child;
+    } else if (child.name === "Rocket") {
+      rocket = child;
+      rocketBaseY = child.position.y;
+    } else if (child.name === "fire") {
+      fire = child;
+      fire.visible = false;
+    } else if (child.name === "ferm_arm") {
+      fermArm = child;
+    } else if (child.name === "arm") {
+      arm = child;
+    } else if (child.name === "head") {
+      head = child;
     }
 
-    // Update texture filtering for all materials
-    if (child.isMesh && child.material) {
-      // Handle both single materials and material arrays
+    if (child.isMesh) {
       const materials = Array.isArray(child.material)
         ? child.material
         : [child.material];
 
-      materials.forEach((material) => {
-        // Iterate through all possible texture properties
-        Object.keys(material).forEach((key) => {
-          const value = material[key];
+      child.material = materials.map((mat) => {
+        const basic = new THREE.MeshBasicMaterial();
 
-          // Check if this property is a texture
-          if (value && value.isTexture) {
-            value.minFilter = THREE.LinearFilter;
-            value.magFilter = THREE.LinearFilter;
-            value.needsUpdate = true;
-          }
-        });
+        if (mat.map) basic.map = mat.map;
+        else if (mat.color) basic.color = mat.color;
+
+        if (mat.transparent) {
+          basic.transparent = mat.transparent;
+          basic.opacity = mat.opacity;
+          basic.alphaMap = mat.alphaMap;
+        }
+
+        basic.side = mat.side;
+        mat.dispose();
+        return basic;
       });
+
+      if (!Array.isArray(child.material) || child.material.length === 1) {
+        child.material = Array.isArray(child.material)
+          ? child.material[0]
+          : child.material;
+      }
     }
   });
 
   scene.add(gltf.scene);
 });
 
-scene.background = new THREE.Color(0xabcdef);
+scene.background = new THREE.Color(0x000000);
+
+/**
+ * Scroll Handling
+ */
+const scrollState = {
+  targetY: 0,
+  currentY: 0,
+};
+
+const ROCKET_MAX_Y = 9;
+const SCROLL_SPEED = 0.01;
+
+window.addEventListener("wheel", (event) => {
+  scrollState.targetY += event.deltaY * SCROLL_SPEED;
+  scrollState.targetY = Math.max(
+    0,
+    Math.min(ROCKET_MAX_Y, scrollState.targetY),
+  );
+});
 
 /**
  * Sizes
@@ -93,15 +128,12 @@ const sizes = {
 };
 
 window.addEventListener("resize", () => {
-  // Update sizes
   sizes.width = window.innerWidth;
   sizes.height = window.innerHeight;
 
-  // Update camera
   camera.aspect = sizes.width / sizes.height;
   camera.updateProjectionMatrix();
 
-  // Update renderer
   renderer.setSize(sizes.width, sizes.height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
@@ -109,24 +141,30 @@ window.addEventListener("resize", () => {
 /**
  * Camera
  */
-// Base camera
+const CAMERA_BASE_POSITION = new THREE.Vector3(
+  -10.39179673171055,
+  2.7233475263359805,
+  0.24856013604615687,
+);
+const CONTROLS_BASE_TARGET = new THREE.Vector3(
+  2.7504822780636977,
+  1.5199821333314436,
+  0.4028514328745653,
+);
+
 const camera = new THREE.PerspectiveCamera(
   50,
   sizes.width / sizes.height,
   0.1,
   1000,
 );
-camera.position.set(
-  -10.531037848972133,
-  2.8900567700050646,
-  0.020307391191941804,
-);
+camera.position.copy(CAMERA_BASE_POSITION);
 scene.add(camera);
 
-// Controls
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.target.set(2.3683907718243873, 1.0882903359783558, 2.15332652306971);
+controls.enableZoom = false;
+controls.target.copy(CONTROLS_BASE_TARGET);
 
 /**
  * Renderer
@@ -145,11 +183,31 @@ const clock = new THREE.Clock();
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime();
-  console.log(camera.position);
-  console.log(controls.target);
+
+  // Smooth scroll interpolation
+  scrollState.currentY += (scrollState.targetY - scrollState.currentY) * 0.08;
+
+  // Apply rocket scroll movement + update fire/rocket visibility
+  if (rocket && rocketBaseY !== null) {
+    const newY = rocketBaseY + scrollState.currentY;
+    rocket.position.y = newY;
+
+    const launched = scrollState.currentY >= ROCKET_MAX_Y - 0.05;
+
+    rocket.visible = !launched;
+
+    if (fire) {
+      fire.position.copy(rocket.position);
+      fire.visible = launched;
+    }
+  }
+
+  // Move camera and orbit target up/down with the rocket's smoothed Y offset
+  camera.position.y = CAMERA_BASE_POSITION.y + scrollState.currentY;
+  controls.target.y = CONTROLS_BASE_TARGET.y + scrollState.currentY;
+
   // Animate fish floating up and down
   if (whiteFish) {
-    // White fish floats with a slower, gentle motion
     whiteFish.position.y += Math.sin(elapsedTime * 0.8) * 0.006;
   }
 
@@ -158,13 +216,20 @@ const tick = () => {
       Math.sin(elapsedTime * 1.2 + Math.PI * 0.5) * 0.006;
   }
 
-  // Update controls
+  if (fermArm) {
+    fermArm.rotation.x = Math.sin(elapsedTime * 1.0) * 0.3;
+  }
+
+  if (arm) {
+    arm.rotation.x = Math.sin(elapsedTime * 1.0 + Math.PI * 0.3) * 0.3;
+  }
+
+  if (head) {
+    head.rotation.y = Math.sin(elapsedTime * 1.2) * 0.3;
+  }
+
   controls.update();
-
-  // Render
   renderer.render(scene, camera);
-
-  // Call tick again on the next frame
   window.requestAnimationFrame(tick);
 };
 
