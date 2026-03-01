@@ -108,7 +108,7 @@ const scrollState = {
   currentY: 0,
 };
 
-const ROCKET_MAX_Y = 9;
+const ROCKET_MAX_Y = 14;
 const SCROLL_SPEED = 0.01;
 
 window.addEventListener("wheel", (event) => {
@@ -194,11 +194,11 @@ const tick = () => {
 
     const launched = scrollState.currentY >= ROCKET_MAX_Y - 0.05;
 
-    rocket.visible = !launched;
+    // rocket.visible = !launched;
 
     if (fire) {
       fire.position.copy(rocket.position);
-      fire.visible = launched;
+      // fire.visible = launched;
     }
   }
 
