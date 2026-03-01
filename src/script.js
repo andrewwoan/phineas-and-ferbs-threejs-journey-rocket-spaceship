@@ -108,7 +108,7 @@ const scrollState = {
   currentY: 0,
 };
 
-const ROCKET_MAX_Y = 50;
+const ROCKET_MAX_Y = 45;
 const SCROLL_SPEED = 0.01;
 
 window.addEventListener("wheel", (event) => {
